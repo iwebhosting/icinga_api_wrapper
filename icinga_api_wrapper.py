@@ -18,15 +18,30 @@ class Config(object):
 cmd = Blueprint('cmd', __name__)
 
 def get_url(uri):
-    return urlparse.urljoin(current_app.config['ICINGA_BASE_URL'], uri)
+    base = current_app.config.get('ICINGA_BASE_URL')
+    if not base:
+        raise ValueError('ICINGA_BASE_URL must be set')
+    if not base.endswith('/'):
+        base += '/'
+    return urlparse.urljoin(base, uri.lstrip('/'))
 
 @cmd.route('/submit_passive', methods=['POST'])
 def submit_passive():
-    url = get_url('/cmd.cgi')
+    url = get_url('cmd.cgi')
     data = {
+        'cmd_typ': '30',
+        'cmd_mod': '2',
+        'hostservice': '^'.join([request.form['host'], request.form['service']]),
+        'plugin_state': RETURN_CODES[request.form['result'].upper()],
+        'plugin_output': request.form['output'],
+        'performance_data': request.form['perfdata'],
     }
     resp = urllib.urlopen(url, urllib.urlencode(data))
-    return ''
+    content = resp.read()
+    if 'commitFailed' in content:
+        d = {'result': 'failed', 'message': 'Submit failed, bad host/service name?'}
+        return jsonify(d), 400
+    return jsonify({'result': 'success'}), 201
 
 def create_app(config=Config):
     app = Flask(__name__)
