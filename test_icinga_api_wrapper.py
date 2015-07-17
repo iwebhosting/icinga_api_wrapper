@@ -53,6 +53,26 @@ class TestCMD(BaseTest):
             data,
         )
 
+    @patch('icinga_api_wrapper.urllib.urlopen')
+    def test_return_code_passed_straight_through(self, urlopen):
+        data = self.postdata.copy()
+        data['result'] = '1'
+        self.client.post('/cmd/submit_passive', data = data)
+        self.assertTrue(urlopen.called)
+        data = urlparse.parse_qsl(urlopen.call_args[0][1])
+        data = dict(data)
+        self.assertEqual(
+            {
+                'cmd_typ': '30',
+                'cmd_mod': '2',
+                'hostservice': self.postdata['host'] + '^' + self.postdata['service'],
+                'plugin_state': '1',
+                'plugin_output': self.postdata['output'],
+                'performance_data': self.postdata['perfdata'],
+            },
+            data,
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

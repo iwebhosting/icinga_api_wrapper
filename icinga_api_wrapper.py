@@ -28,11 +28,12 @@ def get_url(uri):
 @cmd.route('/submit_passive', methods=['POST'])
 def submit_passive():
     url = get_url('cmd.cgi')
+    result = request.form['result'].upper()
     data = {
         'cmd_typ': '30',
         'cmd_mod': '2',
         'hostservice': '^'.join([request.form['host'], request.form['service']]),
-        'plugin_state': RETURN_CODES[request.form['result'].upper()],
+        'plugin_state': RETURN_CODES.get(result, result),
         'plugin_output': request.form['output'],
         'performance_data': request.form['perfdata'],
     }
